@@ -93,6 +93,7 @@ IF DEFINED BUILDDIR (
   SET configureresult=%errorlevel%
   IF NOT "%configureresult%"=="0" (
     set DIETEXT="%APP_NAME%.EXE failed to configure! (cmake returned %configureresult%)"
+    POPD
     goto DIE
   )
 
@@ -101,6 +102,7 @@ IF DEFINED BUILDDIR (
   CALL :CCACHE_REPORT
   IF NOT "%buildresult%"=="0" (
     set DIETEXT="%APP_NAME%.EXE failed to build! (cmake --build returned %buildresult%)"
+    POPD
     goto DIE
   )
 
@@ -186,6 +188,7 @@ rem Runs in the build directory, where CMakeCache.txt records the selected CCACH
   rem with an internal error), so never package from an empty build tree.
   IF NOT EXIST %EXE% (
     set DIETEXT="%APP_NAME%.EXE was not produced by the build, check the build log for compiler or MSBuild errors"
+    POPD
     goto DIE
   )
 
@@ -226,6 +229,7 @@ rem Runs in the build directory, where CMakeCache.txt records the selected CCACH
     IF %errorlevel%==1 (
       set DIETEXT="failed to build addons"
       cd %build_path%
+      POPD
       goto DIE
     )
 
