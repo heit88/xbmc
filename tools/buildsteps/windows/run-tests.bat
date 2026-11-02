@@ -38,7 +38,7 @@ IF EXIST buildlog.html del buildlog.html /q
 ECHO Compiling testsuite...
 cmake.exe --build . --config "%buildconfig%" --target %APP_NAME%-test
 
-IF %errorlevel%==1 (
+IF ERRORLEVEL 1 (
   set DIETEXT="%APP_NAME%-test.exe failed to build!  See %CD%\..\vs2010express\XBMC\%buildconfig%\objs\XBMC.log"
   type "%CD%\..\vs2010express\XBMC\%buildconfig%\objs\XBMC.log"
   goto DIE

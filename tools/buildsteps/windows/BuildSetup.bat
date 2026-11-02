@@ -89,6 +89,18 @@ IF DEFINED BUILDDIR (
   SET CCACHE_STATSLOG=%BUILDDIR%\ccache-stats.log
   IF EXIST "%CCACHE_STATSLOG%" DEL /Q "%CCACHE_STATSLOG%"
 
+  rem MSBuild copies the whole environment into every out-of-proc node it spawns, and
+  rem that block is capped (see xbmc/infrastructure#84). Jenkins/ghprb export the pull
+  rem request title and description here, which on a long or much-edited PR pushes the
+  rem build over the limit so each node dies with MSB4166 "Environment variable name or
+  rem value is too long" before compiling anything. Nothing in this repository reads
+  rem these variables, so drop them before cmake (and therefore MSBuild) is invoked.
+  SET ghprbPullTitle=
+  SET ghprbPullDescription=
+  SET ghprbCommentBody=
+  SET ghprbActualCommitDescription=
+  SET ghprbPullLink=
+
   cmake.exe -G "%cmakeGenerator%" -A %cmakeArch% -T host=x64 %cmakeProps% %base_dir%
   SET configureresult=%errorlevel%
   IF NOT "%configureresult%"=="0" (
@@ -222,11 +234,14 @@ rem Runs in the build directory, where CMakeCache.txt records the selected CCACH
     ECHO ------------------------------------------------------------
     ECHO Building addons...
     cd %base_dir%\tools\buildsteps\windows
+    rem `IF ERRORLEVEL`, not `IF %errorlevel%==1`: inside this block the %-form would be
+    rem expanded when the block is parsed, so it would test whatever ran before the
+    rem block rather than the addons result, and `==1` would miss any other code.
     IF %buildmode%==clean (
       call make-addons.bat clean
     )
     call make-addons.bat
-    IF %errorlevel%==1 (
+    IF ERRORLEVEL 1 (
       set DIETEXT="failed to build addons"
       cd %build_path%
       POPD

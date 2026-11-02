@@ -150,6 +150,13 @@ FOR %%a IN (%ADDONS_TO_MAKE%) DO (
 )
 
 rem everything was fine
+IF EXIST "%ADDONS_FAILURE_FILE%" (
+  ECHO Failed to build addons:
+  TYPE "%ADDONS_FAILURE_FILE%"
+  ECHO See %ERRORFILE% for more details
+  SET EXITCODE=1
+  GOTO END
+)
 GOTO END
 
 :ERROR
