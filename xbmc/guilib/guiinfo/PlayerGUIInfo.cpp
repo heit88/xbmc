@@ -271,14 +271,20 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
       value = GetCurrentSeekTime(static_cast<TIME_FORMAT>(info.GetData1()));
       return true;
     case PLAYER_SEEK_THUMBNAIL:
-      if (item && m_appPlayer->GetSeekHandler().InProgress())
+      if (item)
       {
-        VideoStreamInfo video;
-        m_appPlayer->GetVideoStreamInfo(CURRENT_STREAM, video);
-        const float aspect = video.height > 0 ? static_cast<float>(video.width) / video.height : 0;
-        value = CTrickplayThumbs::GetInstance().GetThumb(
-            item->GetDynPath(), g_application.GetTime() + m_appPlayer->GetSeekHandler().GetSeekSize(),
-            aspect);
+        const bool previewing = m_appPlayer->GetSeekHandler().InProgress();
+        // Chapter skips seek straight away, so cover the wait for the first new frame.
+        if (previewing || CServiceBroker::GetDataCacheCore().HasPerformedSeek(2))
+        {
+          VideoStreamInfo video;
+          m_appPlayer->GetVideoStreamInfo(CURRENT_STREAM, video);
+          const float aspect =
+              video.height > 0 ? static_cast<float>(video.width) / video.height : 0;
+          const int offset = previewing ? m_appPlayer->GetSeekHandler().GetSeekSize() : 0;
+          value = CTrickplayThumbs::GetInstance().GetThumb(
+              item->GetDynPath(), g_application.GetTime() + offset, aspect, previewing);
+        }
       }
       return true;
     case PLAYER_SEEKSTEPSIZE:
