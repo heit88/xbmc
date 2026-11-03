@@ -861,7 +861,7 @@ constexpr std::array<InfoMap, 7> integer_bools = {{
 ///     <p>
 ///   }
 // clang-format off
-constexpr std::array<InfoMap, 60> player_labels = {{
+constexpr std::array<InfoMap, 61> player_labels = {{
     {"hasmedia",              PLAYER_HAS_MEDIA},
     {"hasaudio",              PLAYER_HAS_AUDIO},
     {"hasvideo",              PLAYER_HAS_VIDEO},
@@ -922,6 +922,7 @@ constexpr std::array<InfoMap, 60> player_labels = {{
     {"chapters",              PLAYER_CHAPTERS},
     {"bookmarks",             PLAYER_BOOKMARKS},
     {"hasbookmarks",          PLAYER_HAS_BOOKMARKS},
+    {"seekthumbnail",         PLAYER_SEEK_THUMBNAIL},
 }};
 // clang-format on
 

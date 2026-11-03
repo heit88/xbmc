@@ -20,6 +20,7 @@
 #include "cores/AudioEngine/Utils/AEUtil.h"
 #include "cores/DataCacheCore.h"
 #include "cores/EdlEdit.h"
+#include "cores/VideoPlayer/Interface/StreamInfo.h"
 #include "guilib/GUIComponent.h"
 #include "guilib/GUIDialog.h"
 #include "guilib/GUIWindowManager.h"
@@ -32,6 +33,7 @@
 #include "utils/URIUtils.h"
 #include "utils/Variant.h"
 #include "utils/log.h"
+#include "video/TrickplayThumbs.h"
 #include "windowing/WinSystem.h"
 
 #include <charconv>
@@ -267,6 +269,17 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
     }
     case PLAYER_SEEKTIME:
       value = GetCurrentSeekTime(static_cast<TIME_FORMAT>(info.GetData1()));
+      return true;
+    case PLAYER_SEEK_THUMBNAIL:
+      if (item && m_appPlayer->GetSeekHandler().InProgress())
+      {
+        VideoStreamInfo video;
+        m_appPlayer->GetVideoStreamInfo(CURRENT_STREAM, video);
+        const float aspect = video.height > 0 ? static_cast<float>(video.width) / video.height : 0;
+        value = CTrickplayThumbs::GetInstance().GetThumb(
+            item->GetDynPath(), g_application.GetTime() + m_appPlayer->GetSeekHandler().GetSeekSize(),
+            aspect);
+      }
       return true;
     case PLAYER_SEEKSTEPSIZE:
     {
