@@ -174,6 +174,9 @@ bool CRetroPlayer::Open(const CFileItem& file, const CPlayerOptions& options)
   m_guiMessenger = std::make_unique<CGUIGameMessenger>(*m_processInfo);
   m_renderManager = std::make_unique<CRPRenderManager>(*m_processInfo);
 
+  if (!bStandalone)
+    m_renderManager->SetBezel(GAME::CGameUtils::GetBezel(fileCopy));
+
   std::unique_lock lock(m_mutex);
 
   if (IsPlaying())
@@ -560,6 +563,11 @@ bool CRetroPlayer::SupportsDiscControl() const
   return false;
 }
 
+bool CRetroPlayer::HasBezel() const
+{
+  return m_renderManager && m_renderManager->HasBezel();
+}
+
 bool CRetroPlayer::IsDiscEjected() const
 {
   if (m_gameClient)
@@ -744,8 +752,9 @@ void CRetroPlayer::CreatePlayback(const std::string& savestatePath)
   {
     m_playback->Deinitialize();
     m_playback = std::make_unique<CReversiblePlayback>(
-        m_gameClient.get(), *m_renderManager, *m_guiMessenger, m_processInfo->GetDisplayPacing(),
-        m_gameClient->GetFrameRate(), m_gameClient->GetSerializeSize());
+        m_gameClient.get(), *m_renderManager, *m_streamManager, *m_guiMessenger,
+        m_processInfo->GetDisplayPacing(), m_gameClient->GetFrameRate(),
+        m_gameClient->GetSerializeSize());
   }
   else
     ResetPlayback();
