@@ -91,7 +91,8 @@ void CTrickplayThumbs::Locate(const std::string& mediaPath)
 
 std::string CTrickplayThumbs::GetThumb(const std::string& mediaPath,
                                        double seconds,
-                                       float videoAspect)
+                                       float videoAspect,
+                                       bool keepPrevious)
 {
   std::unique_lock lock(m_lock);
 
@@ -111,7 +112,7 @@ std::string CTrickplayThumbs::GetThumb(const std::string& mediaPath,
     CServiceBroker::GetJobManager()->Submit([this, generation, index, tileHeight]()
                                             { Extract(generation, index, tileHeight); });
   }
-  return m_shownPath;
+  return keepPrevious || index == m_shown ? m_shownPath : std::string();
 }
 
 void CTrickplayThumbs::Extract(unsigned int generation, int index, int tileHeight)

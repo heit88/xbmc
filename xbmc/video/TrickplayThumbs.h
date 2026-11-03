@@ -31,8 +31,12 @@ public:
 
   /*! \brief Path of the thumbnail for a time in the given file, or empty if
    the file has no trickplay folder. videoAspect is the video's width / height.
+   With keepPrevious, the last thumbnail stands in until this one is ready.
    */
-  std::string GetThumb(const std::string& mediaPath, double seconds, float videoAspect);
+  std::string GetThumb(const std::string& mediaPath,
+                       double seconds,
+                       float videoAspect,
+                       bool keepPrevious);
 
 private:
   CTrickplayThumbs() = default;
