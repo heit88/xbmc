@@ -16,7 +16,6 @@
 #include "threads/SystemClock.h"
 #include "threads/Thread.h"
 
-#include <atomic>
 #include <list>
 #include <memory>
 #include <queue>
@@ -275,7 +274,6 @@ public:
   void DeviceChange() override;
   void DefaultDeviceChange() override;
   void DeviceCountChange(const std::string& driver) override;
-  unsigned int GetDeviceChangeCount() const override { return m_deviceChangeCount; }
   bool GetCurrentSinkFormat(AEAudioFormat &SinkFormat) override;
 
   void RegisterAudioCallback(IAudioCallback* pCallback) override;
@@ -363,7 +361,6 @@ protected:
   std::chrono::milliseconds m_extKeepConfig;
   bool m_extDeferData;
   std::queue<time_t> m_extLastDeviceChange;
-  std::atomic<unsigned int> m_deviceChangeCount{0};
   bool m_extSuspended = false;
   bool m_isWinSysReg = false;
 

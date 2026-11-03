@@ -725,7 +725,6 @@ void CActiveAE::StateMachine(int signal, Protocol *port, Message *msg)
           m_extErrorRetries = 0;
           m_extError = false;
           Configure();
-          ++m_deviceChangeCount;
           if (!m_extError)
           {
             m_state = AE_TOP_CONFIGURED_PLAY;

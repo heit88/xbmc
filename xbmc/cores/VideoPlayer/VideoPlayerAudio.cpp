@@ -111,7 +111,6 @@ bool CVideoPlayerAudio::OpenStream(CDVDStreamInfo hints)
 void CVideoPlayerAudio::OpenStream(CDVDStreamInfo& hints, std::unique_ptr<CDVDAudioCodec> codec)
 {
   m_pAudioCodec = std::move(codec);
-  m_aeDeviceChangeCount = CServiceBroker::GetActiveAE()->GetDeviceChangeCount();
 
   m_processInfo.ResetAudioCodecInfo();
 
@@ -499,12 +498,10 @@ bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
       }
     }
 
-    // Display reset or audio device change event has occurred
+    // Display reset event has occurred
     // See if we should enable passthrough
-    const unsigned int aeDeviceChangeCount = CServiceBroker::GetActiveAE()->GetDeviceChangeCount();
-    if (m_displayReset || aeDeviceChangeCount != m_aeDeviceChangeCount)
+    if (m_displayReset)
     {
-      m_aeDeviceChangeCount = aeDeviceChangeCount;
       if (SwitchCodecIfNeeded())
       {
         audioframe.nb_frames = 0;

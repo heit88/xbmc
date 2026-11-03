@@ -282,12 +282,6 @@ public:
   virtual void DeviceCountChange(const std::string& driver) {}
 
   /*!
-   * \brief Get a counter that increments whenever a device change has re-enumerated the sinks,
-   * so players can re-check passthrough support
-   */
-  virtual unsigned int GetDeviceChangeCount() const { return 0; }
-
-  /*!
    * \brief Get the current sink data format
    *
    * \param Current sink data format. For more details see AEAudioFormat.
