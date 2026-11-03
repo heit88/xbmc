@@ -46,6 +46,16 @@
 #include "windowing/WinSystem.h"
 #include "windows/GUIMediaWindow.h"
 
+#include <algorithm>
+
+#if defined(TARGET_ANDROID)
+#include "platform/android/activity/XBMCApp.h"
+
+#include <androidjni/Display.h>
+#include <androidjni/View.h>
+#include <androidjni/Window.h>
+#endif
+
 using namespace KODI::GUILIB;
 using namespace KODI::GUILIB::GUIINFO;
 
@@ -339,6 +349,45 @@ bool CSystemGUIInfo::GetLabel(std::string& value,
       StringUtils::ToCapitalize(value);
       return true;
 #endif
+    case SYSTEM_DISPLAY_MODE:
+    {
+      // The mode the display is actually in. On Android this can differ from
+      // the mode Kodi requested (System.ScreenResolution), e.g. while the AVR
+      // is off, so ask the platform. Cached: the label is drawn every frame.
+      static std::string cached;
+      static unsigned int lastUpdate = 0;
+      const unsigned int now = CTimeUtils::GetFrameTime();
+      if (cached.empty() || now - lastUpdate >= 1000)
+      {
+        lastUpdate = now;
+        cached.clear();
+#if defined(TARGET_ANDROID)
+        CJNIDisplay display = CXBMCApp::getWindow().getDecorView().getDisplay();
+        if (display)
+        {
+          CJNIDisplayMode m = display.getMode();
+          if (m)
+          {
+            const int w = std::max(m.getPhysicalWidth(), m.getPhysicalHeight());
+            const int h = std::min(m.getPhysicalWidth(), m.getPhysicalHeight());
+            cached = StringUtils::Format("{}x{} @ {:.3f} Hz", w, h, m.getRefreshRate());
+          }
+        }
+#endif
+        if (cached.empty())
+        {
+          const auto winSystem = CServiceBroker::GetWinSystem();
+          if (winSystem)
+          {
+            const RESOLUTION_INFO& res = winSystem->GetGfxContext().GetResInfo();
+            cached = StringUtils::Format("{}x{} @ {:.3f} Hz", res.iScreenWidth, res.iScreenHeight,
+                                         res.fRefreshRate);
+          }
+        }
+      }
+      value = cached;
+      return true;
+    }
     case SYSTEM_SUPPORTED_HDR_TYPES:
     {
       if (CServiceBroker::GetWinSystem()->IsHDRDisplay())

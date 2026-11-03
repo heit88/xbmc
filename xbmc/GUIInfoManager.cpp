@@ -2037,7 +2037,7 @@ constexpr std::array<InfoMap, 10> weather = {{
 ///     <p>
 ///   }
 // clang-format off
-constexpr std::array<InfoMap, 76> system_labels = {{
+constexpr std::array<InfoMap, 77> system_labels = {{
     {"hasnetwork",              SYSTEM_ETHERNET_LINK_ACTIVE},
     {"hasmediadvd",             SYSTEM_MEDIA_DVD},
     {"hasmediaaudiocd",         SYSTEM_MEDIA_AUDIO_CD},
@@ -2113,6 +2113,7 @@ constexpr std::array<InfoMap, 76> system_labels = {{
     {"addonupdatecount",        SYSTEM_ADDON_UPDATE_COUNT},
     {"supportscpuusage",        SYSTEM_SUPPORTS_CPU_USAGE},
     {"supportedhdrtypes",       SYSTEM_SUPPORTED_HDR_TYPES},
+    {"displaymode",             SYSTEM_DISPLAY_MODE},
     {"isscreensaverinhibited",  SYSTEM_IS_SCREENSAVER_INHIBITED},
 }};
 // clang-format on

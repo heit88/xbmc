@@ -563,6 +563,7 @@ constexpr uint32_t SYSTEM_PLATFORM_DARWIN_TVOS       = 755;
 constexpr uint32_t SYSTEM_SUPPORTED_HDR_TYPES        = 756;
 constexpr uint32_t SYSTEM_PLATFORM_WEBOS             = 757;
 constexpr uint32_t SYSTEM_MEDIA_BLURAY_PLAYLIST      = 758;
+constexpr uint32_t SYSTEM_DISPLAY_MODE              = 759;
 
 constexpr uint32_t SLIDESHOW_ISPAUSED                = 800;
 constexpr uint32_t SLIDESHOW_ISRANDOM                = 801;
