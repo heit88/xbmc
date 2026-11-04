@@ -30,6 +30,7 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <string_view>
 
 using namespace AE;
 using namespace ActiveAE;
@@ -3439,7 +3440,9 @@ IAE::SoundPtr CActiveAE::MakeSound(const std::string& file)
   // find decoder
   if (avformat_open_input(&fmt_ctx, file.c_str(), nullptr, nullptr) == 0)
   {
-    fmt_ctx->flags |= AVFMT_FLAG_NOPARSE;
+    // a compressed format needs its parser to get whole frames for the decoder
+    if (std::string_view{fmt_ctx->iformat->name} == "wav")
+      fmt_ctx->flags |= AVFMT_FLAG_NOPARSE;
     if (avformat_find_stream_info(fmt_ctx, nullptr) >= 0)
     {
       AVCodecID codecId = fmt_ctx->streams[0]->codecpar->codec_id;
@@ -3498,6 +3501,12 @@ IAE::SoundPtr CActiveAE::MakeSound(const std::string& file)
       }
 
       ret = avcodec_send_packet(dec_ctx, avpkt);
+      // a bad frame in a compressed file isn't worth losing the whole sound
+      if (ret == AVERROR_INVALIDDATA)
+      {
+        av_packet_unref(avpkt);
+        continue;
+      }
       if (ret < 0)
       {
         error = true;
