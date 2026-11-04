@@ -553,6 +553,60 @@ namespace XBMCAddon
 #ifdef DOXYGEN_SHOULD_USE_THIS
     ///
     /// \ingroup python_xbmc
+    /// @brief \python_func{ xbmc.playTheme(filename, [volume]) }
+    /// Loops an audio file in the background, without using a player
+    ///
+    /// The file loads on another thread and is kept in memory, so this suits
+    /// short files. Stop it before playback opens.
+    ///
+    /// @param filename              string - file to play, such as wav or mp3
+    /// @param volume                [opt] float - from 0 to 1, relative to
+    ///                              Kodi's volume
+    ///
+    playTheme(...);
+#else
+    void playTheme(const char* filename, float volume = 1.0f);
+#endif
+
+#ifdef DOXYGEN_SHOULD_USE_THIS
+    ///
+    /// \ingroup python_xbmc
+    /// @brief \python_func{ xbmc.setThemeVolume(volume) }
+    /// Changes the volume of the background theme
+    ///
+    /// @param volume                float - from 0 to 1, relative to Kodi's
+    ///                              volume
+    ///
+    setThemeVolume(...);
+#else
+    void setThemeVolume(float volume);
+#endif
+
+#ifdef DOXYGEN_SHOULD_USE_THIS
+    ///
+    /// \ingroup python_xbmc
+    /// @brief \python_func{ xbmc.stopTheme() }
+    /// Stops the background theme
+    ///
+    stopTheme();
+#else
+    void stopTheme();
+#endif
+
+#ifdef DOXYGEN_SHOULD_USE_THIS
+    ///
+    /// \ingroup python_xbmc
+    /// @brief \python_func{ xbmc.isThemePlaying() }
+    /// Returns True once the background theme has loaded and started
+    ///
+    isThemePlaying();
+#else
+    bool isThemePlaying();
+#endif
+
+#ifdef DOXYGEN_SHOULD_USE_THIS
+    ///
+    /// \ingroup python_xbmc
     /// @brief \python_func{ xbmc.enableNavSounds(yesNo) }
     /// Enables/Disables nav sounds
     ///

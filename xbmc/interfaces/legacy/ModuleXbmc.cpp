@@ -333,6 +333,44 @@ namespace XBMCAddon
         gui->GetAudioManager().Stop();
     }
 
+    void playTheme(const char* filename, float volume)
+    {
+      XBMC_TRACE;
+      if (!filename)
+        return;
+
+      DelayedCallGuard dg;
+      CGUIComponent* gui = CServiceBroker::GetGUI();
+      if (gui)
+        gui->GetAudioManager().PlayTheme(filename, volume);
+    }
+
+    void setThemeVolume(float volume)
+    {
+      XBMC_TRACE;
+      DelayedCallGuard dg;
+      CGUIComponent* gui = CServiceBroker::GetGUI();
+      if (gui)
+        gui->GetAudioManager().SetThemeVolume(volume);
+    }
+
+    void stopTheme()
+    {
+      XBMC_TRACE;
+      DelayedCallGuard dg;
+      CGUIComponent* gui = CServiceBroker::GetGUI();
+      if (gui)
+        gui->GetAudioManager().StopTheme();
+    }
+
+    bool isThemePlaying()
+    {
+      XBMC_TRACE;
+      DelayedCallGuard dg;
+      CGUIComponent* gui = CServiceBroker::GetGUI();
+      return gui && gui->GetAudioManager().IsThemePlaying();
+    }
+
     void enableNavSounds(bool yesNo)
     {
       XBMC_TRACE;

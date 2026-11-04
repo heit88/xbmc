@@ -9,6 +9,7 @@
 #include "GUIAudioManager.h"
 
 #include "ServiceBroker.h"
+#include "URL.h"
 #include "addons/AddonManager.h"
 #include "addons/Skin.h"
 #include "addons/addoninfo/AddonType.h"
@@ -86,6 +87,14 @@ void CGUIAudioManager::Initialize()
 
 void CGUIAudioManager::DeInitialize()
 {
+  StopTheme();
+  {
+    // not under m_cs, which the load needs in order to finish
+    std::unique_lock loadLock(m_themeLoadLock);
+    if (m_themeLoad.valid())
+      m_themeLoad.wait();
+  }
+
   std::unique_lock lock(m_cs);
   UnLoad();
 }
@@ -194,6 +203,69 @@ void CGUIAudioManager::PlayPythonSound(const std::string& strFileName, bool useC
   sound->SetVolume(0.01f * vol);
   sound->Play();
   m_pythonSounds.emplace(strFileName, std::move(sound));
+}
+
+void CGUIAudioManager::PlayTheme(const std::string& file, float volume)
+{
+  unsigned int request;
+  {
+    std::unique_lock lock(m_cs);
+    if (m_theme)
+      m_theme->Stop();
+    m_theme.reset();
+    request = ++m_themeRequest;
+    m_themeVolume = volume;
+  }
+
+  // replacing the future waits for any earlier load, so never hold m_cs here
+  std::unique_lock loadLock(m_themeLoadLock);
+  m_themeLoad = std::async(std::launch::async,
+                           [this, file, request]()
+                           {
+                             IAE* ae = CServiceBroker::GetActiveAE();
+                             if (!ae)
+                               return;
+
+                             std::shared_ptr<IAESound> sound(ae->MakeSound(file));
+                             if (!sound)
+                             {
+                               CLog::Log(LOGWARNING, "CGUIAudioManager: can't load theme {}",
+                                         CURL::GetRedacted(file));
+                               return;
+                             }
+
+                             std::unique_lock lock(m_cs);
+                             if (request != m_themeRequest)
+                               return;
+
+                             sound->SetLooping(true);
+                             sound->SetVolume(m_themeVolume);
+                             sound->Play();
+                             m_theme = std::move(sound);
+                           });
+}
+
+void CGUIAudioManager::SetThemeVolume(float volume)
+{
+  std::unique_lock lock(m_cs);
+  m_themeVolume = volume;
+  if (m_theme)
+    m_theme->SetVolume(volume);
+}
+
+void CGUIAudioManager::StopTheme()
+{
+  std::unique_lock lock(m_cs);
+  ++m_themeRequest;
+  if (m_theme)
+    m_theme->Stop();
+  m_theme.reset();
+}
+
+bool CGUIAudioManager::IsThemePlaying()
+{
+  std::unique_lock lock(m_cs);
+  return m_theme != nullptr;
 }
 
 void CGUIAudioManager::UnLoad()

@@ -40,5 +40,8 @@ public:
 
   /* get the current playback volume of this sound */
   virtual float GetVolume() = 0;
+
+  /* start again from the beginning whenever the sound ends */
+  virtual void SetLooping(bool looping) = 0;
 };
 
