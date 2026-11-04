@@ -2809,31 +2809,46 @@ void CActiveAE::MixSounds(CSoundPacket &dstSample)
   {
     if (!it->sound->IsConverted())
       ResampleSound(it->sound);
-    int available_samples = it->sound->GetSound(false)->nb_samples - it->samples_played;
-    int mix_samples = std::min(max_samples, available_samples);
-    int start = it->samples_played *
-                av_get_bytes_per_sample(it->sound->GetSound(false)->config.fmt) *
-                it->sound->GetSound(false)->config.channels /
-                it->sound->GetSound(false)->planes;
-
-    for(int j=0; j<dstSample.planes; j++)
+    CSoundPacket* sound = it->sound->GetSound(false);
+    int mixed = 0;
+    bool finished = false;
+    // a looping sound can end and restart within one packet
+    while (mixed < max_samples && !finished)
     {
-      volume = it->sound->GetVolume();
-      out = (float*)dstSample.data[j];
-      sample_buffer = (float*)(it->sound->GetSound(false)->data[j]+start);
-      int nb_floats = mix_samples * dstSample.config.channels / dstSample.planes;
+      int available_samples = sound->nb_samples - it->samples_played;
+      int mix_samples = std::min(max_samples - mixed, available_samples);
+      int start = it->samples_played * av_get_bytes_per_sample(sound->config.fmt) *
+                  sound->config.channels / sound->planes;
+      int out_offset = mixed * dstSample.config.channels / dstSample.planes;
+
+      for (int j = 0; j < dstSample.planes; j++)
+      {
+        volume = it->sound->GetVolume();
+        out = reinterpret_cast<float*>(dstSample.data[j]) + out_offset;
+        sample_buffer = reinterpret_cast<float*>(sound->data[j] + start);
+        int nb_floats = mix_samples * dstSample.config.channels / dstSample.planes;
 #if defined(HAVE_SSE) && defined(__SSE__)
-      CAEUtil::SSEMulAddArray(out, sample_buffer, volume, nb_floats);
+        CAEUtil::SSEMulAddArray(out, sample_buffer, volume, nb_floats);
 #else
-      for (int k = 0; k < nb_floats; ++k)
-        *out++ += *sample_buffer++ * volume;
+        for (int k = 0; k < nb_floats; ++k)
+          *out++ += *sample_buffer++ * volume;
 #endif
+      }
+
+      mixed += mix_samples;
+      it->samples_played += mix_samples;
+
+      if (it->samples_played >= sound->nb_samples)
+      {
+        if (it->sound->IsLooping() && sound->nb_samples > 0)
+          it->samples_played = 0;
+        else
+          finished = true;
+      }
     }
 
-    it->samples_played += mix_samples;
-
     // no more frames, so remove it from the list
-    if (it->samples_played >= it->sound->GetSound(false)->nb_samples)
+    if (finished)
     {
       it = m_sounds_playing.erase(it);
       continue;
@@ -3475,6 +3490,13 @@ IAE::SoundPtr CActiveAE::MakeSound(const std::string& file)
     int ret;
     while (av_read_frame(fmt_ctx, avpkt) >= 0 && !error)
     {
+      // skip anything else in the file, such as an MP3's cover art
+      if (avpkt->stream_index != 0)
+      {
+        av_packet_unref(avpkt);
+        continue;
+      }
+
       ret = avcodec_send_packet(dec_ctx, avpkt);
       if (ret < 0)
       {
@@ -3487,6 +3509,10 @@ IAE::SoundPtr CActiveAE::MakeSound(const std::string& file)
         if (!init)
         {
           int samples = fileSize / av_get_bytes_per_sample(dec_ctx->sample_fmt) / config.channels;
+          // a compressed file decodes to far more samples than its size suggests
+          if (fmt_ctx->duration > 0)
+            samples = std::max(samples, static_cast<int>(av_rescale(fmt_ctx->duration + AV_TIME_BASE,
+                                                                    config.sample_rate, AV_TIME_BASE)));
           config.fmt = dec_ctx->sample_fmt;
           config.bits_per_sample = dec_ctx->bits_per_coded_sample;
           sound->InitSound(true, config, samples);

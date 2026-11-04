@@ -13,6 +13,8 @@
 
 class DllAvUtil;
 
+#include <atomic>
+
 namespace XFILE
 {
 class CFile;
@@ -37,6 +39,8 @@ public:
   AEChannel GetChannel() override { return m_channel; }
   void SetVolume(float volume) override { m_volume = std::max(0.0f, std::min(1.0f, volume)); }
   float GetVolume() override { return m_volume; }
+  void SetLooping(bool looping) override { m_looping = looping; }
+  bool IsLooping() const { return m_looping; }
 
   uint8_t** InitSound(bool orig, SampleConfig config, int nb_samples);
   bool StoreSound(bool orig, uint8_t **buffer, int samples, int linesize);
@@ -61,6 +65,7 @@ protected:
   bool m_isSeekPossible;
   int m_fileSize;
   float m_volume = 1.0f;
+  std::atomic<bool> m_looping{false};
   AEChannel m_channel = AE_CH_NULL;
 
   CSoundPacket *m_orig_sound;

@@ -13,6 +13,7 @@
 #include "settings/lib/ISettingCallback.h"
 #include "threads/CriticalSection.h"
 
+#include <future>
 #include <map>
 #include <memory>
 #include <string>
@@ -59,6 +60,21 @@ public:
   void PlayWindowSound(int id, WINDOW_SOUND event);
   void PlayPythonSound(const std::string& strFileName, bool useCached = true);
 
+  /*!
+   * \brief Loop a file in the background of the audio engine, without using a player.
+   *
+   * The file is loaded on another thread, so it starts a moment later. Replaces any theme that is
+   * already playing. It doesn't play over a stream unless it was started first, and never over
+   * passthrough, so stop it before playback opens.
+   *
+   * \param file The file to play
+   * \param volume From 0 to 1, relative to Kodi's own volume
+   */
+  void PlayTheme(const std::string& file, float volume);
+  void SetThemeVolume(float volume);
+  void StopTheme();
+  bool IsThemePlaying();
+
   void Enable(bool bEnable);
   void SetVolume(float level);
   void Stop();
@@ -81,6 +97,12 @@ private:
   bool                m_bEnabled;
 
   CCriticalSection    m_cs;
+
+  std::shared_ptr<IAESound> m_theme;
+  float m_themeVolume{1.0f};
+  unsigned int m_themeRequest{0}; //!< a load that finishes with an older number is discarded
+  std::future<void> m_themeLoad;
+  CCriticalSection m_themeLoadLock;
 
   std::shared_ptr<IAESound> LoadSound(const std::string& filename);
   std::shared_ptr<IAESound> LoadWindowSound(TiXmlNode* pWindowNode,
