@@ -238,6 +238,8 @@ void CGUIAudioManager::PlayTheme(const std::string& file, float volume)
                              if (request != m_themeRequest)
                                return;
 
+                             CLog::Log(LOGINFO, "CGUIAudioManager: playing theme {}",
+                                       CURL::GetRedacted(file));
                              sound->SetLooping(true);
                              sound->SetVolume(m_themeVolume);
                              sound->Play();
