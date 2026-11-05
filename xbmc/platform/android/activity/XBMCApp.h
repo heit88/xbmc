@@ -139,6 +139,7 @@ public:
   void onDestroyWindow() override;
   void onGainFocus() override;
   void onLostFocus() override;
+  void ReacquireAudio();
 
   void Initialize();
   void Deinitialize();
@@ -239,6 +240,7 @@ private:
   IInputHandler& m_inputHandler;
   int m_batteryLevel{0};
   bool m_hasFocus{false};
+  std::atomic<bool> m_aeReleased{false};
   bool m_headsetPlugged{false};
   bool m_hdmiSource{false};
   bool m_wakeUp{false};

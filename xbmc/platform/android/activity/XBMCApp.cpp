@@ -46,6 +46,7 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "threads/Event.h"
+#include "jobs/JobManager.h"
 #include "utils/JSONVariantParser.h"
 #include "utils/StringUtils.h"
 #include "utils/TimeUtils.h"
@@ -323,9 +324,26 @@ std::vector<int> getHdmiEncodings()
 }
 } // namespace
 
+void CXBMCApp::ReacquireAudio()
+{
+  if (!m_aeReleased.exchange(false))
+    return;
+
+  android_printf("CXBMCApp: taking the audio device back");
+  CServiceBroker::GetJobManager()->Submit(
+      []
+      {
+        IAE* iae = CServiceBroker::GetActiveAE();
+        if (iae)
+          iae->Resume();
+      });
+}
+
 void CXBMCApp::onResume()
 {
   android_printf("CXBMCApp::%s", __FUNCTION__);
+
+  ReacquireAudio();
 
   if (g_application.IsInitialized() &&
       CServiceBroker::GetWinSystem()->GetOSScreenSaver()->IsInhibited())
@@ -407,6 +425,19 @@ void CXBMCApp::onPause()
 void CXBMCApp::onStop()
 {
   android_printf("CXBMCApp::%s", __FUNCTION__);
+
+  // A background app holding the HDMI audio device, and reopening it on every display mode
+  // change, disturbs whichever app is in front. Nothing to hear from here, so let it go.
+  if (!(m_playback_state & PLAYBACK_STATE_PLAYING) && !m_hasReqVisible &&
+      g_application.IsInitialized())
+  {
+    IAE* iae = CServiceBroker::GetActiveAE();
+    if (iae && !m_aeReleased.exchange(true))
+    {
+      android_printf("CXBMCApp: releasing the audio device in the background");
+      iae->Suspend();
+    }
+  }
 
   if ((m_playback_state & PLAYBACK_STATE_PLAYING) && !m_hasReqVisible)
   {
@@ -918,6 +949,8 @@ void CXBMCApp::UpdateSessionState()
 
 void CXBMCApp::OnPlayBackStarted()
 {
+  ReacquireAudio(); // started from the web interface while in the background
+
   CLog::Log(LOGDEBUG, "CXBMCApp::{}", __FUNCTION__);
   const auto& components = CServiceBroker::GetAppComponents();
   const auto appPlayer = components.GetComponent<CApplicationPlayer>();
