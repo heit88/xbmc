@@ -8,11 +8,12 @@ Kodi release, and it isn't published as a download.
 
 | Code | Location | Visibility |
 |---|---|---|
-| Kodi+ C++ code | `fork/test-player` in `heit88/xbmc`, based on Kodi's `Piers` | Public |
+| Kodi+ C++ code | `kodi-plus` in `heit88/xbmc`, based on Kodi's `Piers` | Public |
 | Fixes offered to Kodi | `fix/*` in `heit88/xbmc`, based on Kodi's `master` | Public |
 | Skin and add-ons | `skin/` in `Shield_control`, branch `feature/trickplay-seek` | Private |
 
 `master` and `Piers` in this repository follow Kodi's own branches. Don't add Kodi+ work to them.
+Retired feature branches are kept as `archive/*` tags.
 
 ## Features
 
@@ -52,9 +53,9 @@ private skin or its add-ons.
 
 | Feature | What it does | Needs | Status |
 |---|---|---|---|
-| MQTT commands | Runs commands from the `kodi/command` topic, for remote buttons that can't reach Kodi | Skin | Skin only |
+| MQTT commands | Runs commands from the `kodi/command` topic; a debug tool that may be removed | Skin | Skin only |
 | Problem reports | Saves a report of what was playing, from the player or over MQTT | Skin | Skin only |
-| Credits chapters | Adds a Credits chapter to MKV files, with backups for restoring them | `automation/` in `Shield_control` | Private script |
+| Credits chapters | Adds a Credits chapter to MKV files, with backups for restoring them | `automation/` in `Shield_control` | Not being rolled out; the next-episode card replaced it |
 
 ### Appearance
 
@@ -86,10 +87,10 @@ uninstalling first, which removes the profile stored with the app.
 | Change | Where it goes |
 |---|---|
 | A bug in Kodi itself | A new `fix/*` branch from Kodi's `master`, plus a PR to `xbmc/xbmc` |
-| A feature only Kodi+ needs | A commit on `fork/test-player`; prefix the subject with `[fork]` if it should never go upstream |
+| A feature only Kodi+ needs | A commit on `kodi-plus`; prefix the subject with `[fork]` if it should never go upstream |
 | Anything in the skin or its add-ons | `Shield_control` |
 
-Fixes on `fork/test-player` can be dropped once the same change is in Kodi's `Piers` branch. Follow
+Fixes on `kodi-plus` can be dropped once the same change is in Kodi's `Piers` branch. Follow
 [CODE_GUIDELINES.md](CODE_GUIDELINES.md) and [CONTRIBUTING.md](CONTRIBUTING.md) for anything going
 upstream, and update the tables above when a feature or PR changes.
 
