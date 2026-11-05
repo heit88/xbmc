@@ -41,5 +41,8 @@ private:
   bool m_viewModeChanged;
   std::chrono::time_point<std::chrono::steady_clock> m_dwShowViewModeTimeout;
 
+  void HideCurrentTime();
+
   bool m_bShowCurrentTime;
+  std::chrono::time_point<std::chrono::steady_clock> m_showCurrentTimeUntil;
 };

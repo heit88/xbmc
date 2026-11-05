@@ -119,8 +119,26 @@ bool CGUIWindowFullScreen::OnAction(const CAction &action)
     }
     break;
 
+  // Fork: Down and Stop (Back, in our keymap) close the scrub bar before anything else
+  case ACTION_MOVE_DOWN:
+    if (m_bShowCurrentTime)
+    {
+      HideCurrentTime();
+      return true;
+    }
+    break;
+
+  case ACTION_STOP:
+    if (m_bShowCurrentTime)
+    {
+      HideCurrentTime();
+      return true;
+    }
+    break;
+
   case ACTION_SHOW_OSD_TIME:
     m_bShowCurrentTime = !m_bShowCurrentTime;
+    m_showCurrentTimeUntil = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     CServiceBroker::GetGUI()->GetInfoManager().GetInfoProviders().GetPlayerInfoProvider().SetShowTime(m_bShowCurrentTime);
     return true;
     break;
@@ -273,12 +291,22 @@ EVENT_RESULT CGUIWindowFullScreen::OnMouseEvent(const CPoint& point,
   return EVENT_RESULT_UNHANDLED;
 }
 
+void CGUIWindowFullScreen::HideCurrentTime()
+{
+  m_bShowCurrentTime = false;
+  CServiceBroker::GetGUI()->GetInfoManager().GetInfoProviders().GetPlayerInfoProvider().SetShowTime(
+      false);
+}
+
 void CGUIWindowFullScreen::FrameMove()
 {
   const auto& components = CServiceBroker::GetAppComponents();
   const auto appPlayer = components.GetComponent<CApplicationPlayer>();
   if (!appPlayer->HasPlayer())
     return;
+
+  if (m_bShowCurrentTime && std::chrono::steady_clock::now() >= m_showCurrentTimeUntil)
+    HideCurrentTime();
 
   //----------------------
   // ViewMode Information
