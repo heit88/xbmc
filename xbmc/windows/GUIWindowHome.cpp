@@ -43,20 +43,9 @@ CGUIWindowHome::~CGUIWindowHome(void)
 
 bool CGUIWindowHome::OnAction(const CAction &action)
 {
-  static unsigned int min_hold_time = 1000;
-  if (action.GetID() == ACTION_NAV_BACK && action.GetHoldTime() < min_hold_time)
-  {
-    const auto& components = CServiceBroker::GetAppComponents();
-    const auto appPlayer = components.GetComponent<CApplicationPlayer>();
-    if (appPlayer->IsPlaying() && (!appPlayer->IsRemotePlaying() || appPlayer->HasAudio()))
-    {
-      CGUIComponent* gui = CServiceBroker::GetGUI();
-      if (gui)
-        gui->GetWindowManager().SwitchToFullScreen();
-
-      return true;
-    }
-  }
+  // Fork: Back on Home stays on Home. Reopening the player here made a loop with
+  // Back on the player, with the music still going. The skin's Now Playing tab
+  // is the way back to the player.
   return CGUIWindow::OnAction(action);
 }
 
