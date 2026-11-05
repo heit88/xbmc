@@ -37,7 +37,7 @@ CTrickplayThumbs& CTrickplayThumbs::GetInstance()
   return instance;
 }
 
-void CTrickplayThumbs::Locate(const std::string& mediaPath)
+void CTrickplayThumbs::StartLocating(const std::string& mediaPath)
 {
   m_media = mediaPath;
   m_tileDir.clear();
@@ -47,10 +47,21 @@ void CTrickplayThumbs::Locate(const std::string& mediaPath)
   m_sheetPath.clear();
   m_sheet.reset();
 
-  if (!m_outDir.empty())
-    CDirectory::RemoveRecursive(m_outDir);
+  const std::string oldOutDir = m_outDir;
   m_generation++;
   m_outDir = StringUtils::Format("special://temp/trickplay/{}/", m_generation);
+
+  const unsigned int generation = m_generation;
+  CServiceBroker::GetJobManager()->Submit([this, generation, mediaPath, oldOutDir]()
+                                          { Locate(generation, mediaPath, oldOutDir); });
+}
+
+void CTrickplayThumbs::Locate(unsigned int generation,
+                              const std::string& mediaPath,
+                              const std::string& oldOutDir)
+{
+  if (!oldOutDir.empty())
+    CDirectory::RemoveRecursive(oldOutDir);
 
   if (URIUtils::IsInternetStream(mediaPath))
     return;
@@ -63,6 +74,11 @@ void CTrickplayThumbs::Locate(const std::string& mediaPath)
   if (!CDirectory::GetDirectory(root, items, "", DIR_FLAG_NO_FILE_DIRS | DIR_FLAG_BYPASS_CACHE))
     return;
 
+  std::string tileDir;
+  int tileWidth = 0;
+  int tileCols = 0;
+  int tileRows = 0;
+
   // Folder names are "<width> - <cols>x<rows>"; take the widest.
   for (const auto& item : items)
   {
@@ -72,21 +88,29 @@ void CTrickplayThumbs::Locate(const std::string& mediaPath)
     int cols = 0;
     int rows = 0;
     if (sscanf(item->GetLabel().c_str(), "%d - %dx%d", &width, &cols, &rows) == 3 &&
-        width > m_width && cols > 0 && rows > 0)
+        width > tileWidth && cols > 0 && rows > 0)
     {
-      m_tileDir = URIUtils::AddFileToFolder(item->GetPath(), "");
-      m_width = width;
-      m_cols = cols;
-      m_rows = rows;
+      tileDir = URIUtils::AddFileToFolder(item->GetPath(), "");
+      tileWidth = width;
+      tileCols = cols;
+      tileRows = rows;
     }
   }
 
-  if (!m_tileDir.empty())
-  {
-    CDirectory::Create(m_outDir);
-    CLog::Log(LOGINFO, "CTrickplayThumbs: using {} ({}x{} tiles of width {})",
-              CURL::GetRedacted(m_tileDir), m_cols, m_rows, m_width);
-  }
+  if (tileDir.empty())
+    return;
+
+  std::unique_lock lock(m_lock);
+  if (generation != m_generation)
+    return;
+
+  CDirectory::Create(m_outDir);
+  m_tileDir = tileDir;
+  m_width = tileWidth;
+  m_cols = tileCols;
+  m_rows = tileRows;
+  CLog::Log(LOGINFO, "CTrickplayThumbs: using {} ({}x{} tiles of width {})",
+            CURL::GetRedacted(m_tileDir), m_cols, m_rows, m_width);
 }
 
 std::string CTrickplayThumbs::GetThumb(const std::string& mediaPath,
@@ -97,7 +121,7 @@ std::string CTrickplayThumbs::GetThumb(const std::string& mediaPath,
   std::unique_lock lock(m_lock);
 
   if (mediaPath != m_media)
-    Locate(mediaPath);
+    StartLocating(mediaPath);
   if (m_tileDir.empty())
     return {};
 
@@ -118,6 +142,8 @@ std::string CTrickplayThumbs::GetThumb(const std::string& mediaPath,
 void CTrickplayThumbs::Extract(unsigned int generation, int index, int tileHeight)
 {
   std::string sheetPath;
+  std::string loadedPath;
+  std::unique_ptr<CTexture> sheet;
   std::string outPath;
   int cols;
   int rows;
@@ -135,18 +161,21 @@ void CTrickplayThumbs::Extract(unsigned int generation, int index, int tileHeigh
     cols = m_cols;
     rows = m_rows;
     width = m_width;
+    // Only one job runs at a time; it keeps the sheet for its next tile if the file hasn't changed.
+    sheet = std::move(m_sheet);
+    loadedPath = m_sheetPath;
   }
 
   bool ok = false;
-  if (sheetPath != m_sheetPath)
+  if (sheetPath != loadedPath)
   {
-    m_sheet = CTexture::LoadFromFile(sheetPath);
-    m_sheetPath = sheetPath;
+    sheet = CTexture::LoadFromFile(sheetPath);
+    loadedPath = sheetPath;
   }
-  if (m_sheet && m_sheet->GetPixels())
+  if (sheet && sheet->GetPixels())
   {
-    const int sheetWidth = static_cast<int>(m_sheet->GetWidth());
-    const int sheetHeight = static_cast<int>(m_sheet->GetHeight());
+    const int sheetWidth = static_cast<int>(sheet->GetWidth());
+    const int sheetHeight = static_cast<int>(sheet->GetHeight());
     // Sheets may be stored scaled; work in the sheet's own pixels.
     const float scale = static_cast<float>(sheetWidth) / (cols * width);
     const int inSheet = index % (cols * rows);
@@ -159,9 +188,8 @@ void CTrickplayThumbs::Extract(unsigned int generation, int index, int tileHeigh
     {
       uint32_t outWidth = w;
       uint32_t outHeight = h;
-      uint8_t* pixels = m_sheet->GetPixels() + y * m_sheet->GetPitch() + x * 4;
-      ok = CPicture::CacheTexture(pixels, w, h, m_sheet->GetPitch(), 0, outWidth, outHeight,
-                                  outPath);
+      uint8_t* pixels = sheet->GetPixels() + y * sheet->GetPitch() + x * 4;
+      ok = CPicture::CacheTexture(pixels, w, h, sheet->GetPitch(), 0, outWidth, outHeight, outPath);
     }
   }
 
@@ -169,6 +197,8 @@ void CTrickplayThumbs::Extract(unsigned int generation, int index, int tileHeigh
   m_pending = -1;
   if (generation == m_generation)
   {
+    m_sheet = std::move(sheet);
+    m_sheetPath = loadedPath;
     // On failure show nothing for this tile rather than retrying every frame.
     m_shown = index;
     m_shownPath = ok ? outPath : std::string();

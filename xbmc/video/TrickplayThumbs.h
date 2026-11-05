@@ -41,7 +41,8 @@ public:
 private:
   CTrickplayThumbs() = default;
 
-  void Locate(const std::string& mediaPath);
+  void StartLocating(const std::string& mediaPath);
+  void Locate(unsigned int generation, const std::string& mediaPath, const std::string& oldOutDir);
   void Extract(unsigned int generation, int index, int tileHeight);
 
   CCriticalSection m_lock;
