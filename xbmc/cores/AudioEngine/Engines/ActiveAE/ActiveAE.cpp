@@ -2825,13 +2825,31 @@ void CActiveAE::MixSounds(CSoundPacket &dstSample)
     {
       int available_samples = sound->nb_samples - it->samples_played;
       int mix_samples = std::min(max_samples - mixed, available_samples);
+      // Fork: a looping sound fades out and back in at the loop point
+      float loopGain = 1.0f;
+      if (it->sound->IsLooping())
+      {
+        const int fade = std::min(sound->config.sample_rate * 3 / 2, sound->nb_samples / 4);
+        if (fade > 0 && it->samples_played < fade)
+        {
+          loopGain = static_cast<float>(it->samples_played) / fade;
+          mix_samples = std::min(mix_samples, 64);
+        }
+        else if (fade > 0 && available_samples <= fade)
+        {
+          loopGain = static_cast<float>(available_samples) / fade;
+          mix_samples = std::min(mix_samples, 64);
+        }
+        else if (fade > 0)
+          mix_samples = std::min(mix_samples, available_samples - fade);
+      }
       int start = it->samples_played * av_get_bytes_per_sample(sound->config.fmt) *
                   sound->config.channels / sound->planes;
       int out_offset = mixed * dstSample.config.channels / dstSample.planes;
 
       for (int j = 0; j < dstSample.planes; j++)
       {
-        volume = it->sound->GetVolume();
+        volume = it->sound->GetVolume() * loopGain;
         out = reinterpret_cast<float*>(dstSample.data[j]) + out_offset;
         sample_buffer = reinterpret_cast<float*>(sound->data[j] + start);
         int nb_floats = mix_samples * dstSample.config.channels / dstSample.planes;
