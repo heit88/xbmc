@@ -119,11 +119,12 @@ bool CGUIWindowFullScreen::OnAction(const CAction &action)
     }
     break;
 
-  // Fork: Down and Stop (Back, in our keymap) close the scrub bar before anything else
+  // Fork: Down goes from the scrub bar to the menu, and Stop (Back, in our keymap) closes the bar
   case ACTION_MOVE_DOWN:
     if (m_bShowCurrentTime)
     {
       HideCurrentTime();
+      ToggleOSD();
       return true;
     }
     break;
