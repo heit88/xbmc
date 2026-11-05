@@ -10,7 +10,7 @@ Kodi release, and it isn't published as a download.
 |---|---|---|
 | Kodi+ C++ code | `kodi-plus` in `heit88/xbmc`, based on Kodi's `Piers` | Public |
 | Fixes offered to Kodi | `fix/*` in `heit88/xbmc`, based on Kodi's `master` | Public |
-| Skin and add-ons | `skin/` in `Shield_control`, branch `feature/trickplay-seek` | Private |
+| Skin and add-ons | `skin/` in `Shield_control`, branch `main` | Private |
 
 `master` and `Piers` in this repository follow Kodi's own branches. Don't add Kodi+ work to them.
 Retired feature branches are kept as `archive/*` tags.
@@ -36,8 +36,8 @@ private skin or its add-ons.
 |---|---|---|---|
 | Seek thumbnails | Shows preview images from Jellyfin trickplay folders stored with the media | Fork and Skin | Kodi+ only; possible PR |
 | Actual display mode | Adds `System.DisplayMode`, the mode the display is really in | Fork and Skin | Kodi+ only; possible PR |
-| Scrub bar | Up shows it; it closes on Down, on Stop or after five seconds | Fork and Skin | Kodi+ only |
-| Next-episode card | Up opens it near the end of an episode; it can also open on its own | Skin; Up needs Fork | Kodi+ only |
+| Scrub bar | Up shows it and Down goes on to the menu; it closes on Up, on Stop or after five seconds | Fork and Skin | Kodi+ only |
+| Next-episode card | Up opens it near the end of an episode and Down goes on to the scrub bar; it can also open on its own | Skin; Up needs Fork | Kodi+ only |
 | Pause under menus | Video pauses while a menu is open and resumes when it closes; music keeps playing | Skin | Skin only |
 | Back on Home | Stays on Home instead of reopening the player | Fork | Kodi+ only |
 
@@ -62,6 +62,7 @@ private skin or its add-ons.
 | Feature | What it does | Needs | Status |
 |---|---|---|---|
 | Cinema Lite | A light skin based on Estuary, with Now Playing and Settings tabs | Skin | Private |
+| Screensaver | Black, or dimmed album art and track details moving around while music plays | Skin | Skin only |
 | Branding | Kodi+ name, gold logo, banner and launcher icons | Fork | Kodi+ only |
 
 ## Building
