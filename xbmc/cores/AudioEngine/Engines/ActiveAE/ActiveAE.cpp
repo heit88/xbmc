@@ -3484,11 +3484,10 @@ IAE::SoundPtr CActiveAE::MakeSound(const std::string& file)
     CLog::Log(LOGERROR, "CActiveAE::{} - av_frame_alloc failed: {}", __FUNCTION__, strerror(errno));
 
   bool error = false;
+  bool init = false;
 
   if (avpkt && decoded_frame && avcodec_open2(dec_ctx, dec, nullptr) >= 0)
   {
-    bool init = false;
-
     // decode until eof
     int ret;
     while (av_read_frame(fmt_ctx, avpkt) >= 0 && !error)
@@ -3565,7 +3564,7 @@ IAE::SoundPtr CActiveAE::MakeSound(const std::string& file)
     av_freep(&io_ctx);
   }
 
-  if (error)
+  if (error || !init)
   {
     return nullptr;
   }
