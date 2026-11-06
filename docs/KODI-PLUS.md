@@ -35,6 +35,7 @@ private skin or its add-ons.
 | Feature | What it does | Needs | Status |
 |---|---|---|---|
 | Seek thumbnails | Shows preview images from Jellyfin trickplay folders stored with the media | Fork and Skin | Kodi+ only; possible PR |
+| Thumbnail scrubbing | Left and Right pause the video and move 30 seconds at a time through a row of thumbnails, then it jumps and plays 3 seconds after the last press; Select jumps now, Back cancels and Down cancels and opens the menu | Fork and Skin | Kodi+ only |
 | Actual display mode | Adds `System.DisplayMode`, the mode the display is really in | Fork and Skin | Kodi+ only; possible PR |
 | Scrub bar | Up shows it and Down goes on to the menu; it closes on Up, on Stop or after five seconds | Fork and Skin | Kodi+ only |
 | Next-episode card | Up opens it near the end of an episode and Down goes on to the scrub bar; it can also open on its own | Skin; Up needs Fork | Kodi+ only |
@@ -55,6 +56,7 @@ private skin or its add-ons.
 |---|---|---|---|
 | MQTT commands | Runs commands from the `kodi/command` topic; a debug tool that may be removed | Skin | Skin only |
 | Problem reports | Saves a report of what was playing, from the player or over MQTT | Skin | Skin only |
+| Watched sync | Keeps watched status and resume points the same in Kodi+ and Jellyfin; the most recent change wins | Skin | Skin only |
 | Credits chapters | Adds a Credits chapter to MKV files, with backups for restoring them | `automation/` in `Shield_control` | Not being rolled out; the next-episode card replaced it |
 
 ### Appearance
