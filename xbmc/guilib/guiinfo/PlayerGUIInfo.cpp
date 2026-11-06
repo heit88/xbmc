@@ -39,6 +39,7 @@
 #include <charconv>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <memory>
 
 using namespace KODI::GUILIB::GUIINFO;
@@ -117,6 +118,10 @@ std::string CPlayerGUIInfo::GetCurrentSeekTime(TIME_FORMAT format) const
 {
   if (format == TIME_FORMAT_GUESS && GetTotalPlayTime() >= 3600)
     format = TIME_FORMAT_HH_MM_SS;
+
+  double scrubTime = 0;
+  if (m_appPlayer->GetSeekHandler().GetScrubTime(0, scrubTime))
+    return StringUtils::SecondsToTimeString(static_cast<long>(scrubTime), format);
 
   return StringUtils::SecondsToTimeString(
       g_application.GetTime() + m_appPlayer->GetSeekHandler().GetSeekSize(), format);
@@ -282,11 +287,28 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
           const float aspect =
               video.height > 0 ? static_cast<float>(video.width) / video.height : 0;
           const int offset = previewing ? m_appPlayer->GetSeekHandler().GetSeekSize() : 0;
-          value = CTrickplayThumbs::GetInstance().GetThumb(
-              item->GetDynPath(), g_application.GetTime() + offset, aspect, previewing);
+          double seconds = g_application.GetTime() + offset;
+          m_appPlayer->GetSeekHandler().GetScrubTime(0, seconds);
+          value = CTrickplayThumbs::GetInstance().GetThumb(item->GetDynPath(), seconds, aspect,
+                                                           previewing, true);
         }
       }
       return true;
+    case PLAYER_SEEK_THUMBNAIL_AT:
+    {
+      // The row of thumbnails either side of the chosen one, by how many presses away each is.
+      double seconds = 0;
+      if (item && m_appPlayer->GetSeekHandler().GetScrubTime(std::atoi(info.GetData3().c_str()),
+                                                             seconds))
+      {
+        VideoStreamInfo video;
+        m_appPlayer->GetVideoStreamInfo(CURRENT_STREAM, video);
+        const float aspect = video.height > 0 ? static_cast<float>(video.width) / video.height : 0;
+        value = CTrickplayThumbs::GetInstance().GetThumb(item->GetDynPath(), seconds, aspect,
+                                                         false, false);
+      }
+      return true;
+    }
     case PLAYER_SEEKSTEPSIZE:
     {
       int seekSize = m_appPlayer->GetSeekHandler().GetSeekSize();

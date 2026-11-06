@@ -30,6 +30,7 @@
 #include "utils/StringUtils.h"
 #include "utils/Variant.h"
 #include "utils/log.h"
+#include "video/TrickplayThumbs.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 
@@ -40,6 +41,13 @@
 #include <stdlib.h>
 
 using namespace KODI;
+
+namespace
+{
+// Fork: every press on video moves this far, and the video resumes this long after the last one.
+constexpr int SCRUB_STEP_SECONDS = 30;
+constexpr int SCRUB_RESUME_MS = 3000;
+} // namespace
 
 void CSeekHandler::Configure()
 {
@@ -79,6 +87,12 @@ void CSeekHandler::Configure()
 
 void CSeekHandler::Reset()
 {
+  // Something else took over the player while it was paused for scrubbing.
+  if (m_scrubbing)
+  {
+    m_scrubbing = false;
+    m_resumeAfterScrub = !m_scrubWasPaused;
+  }
   m_requireSeek = false;
   m_analogSeek = false;
   m_seekStep = 0;
@@ -156,6 +170,11 @@ void CSeekHandler::Seek(bool forward, float amount, float duration /* = 0 */, bo
 {
   std::unique_lock lock(m_critSection);
 
+  if (type == SeekType::VIDEO && !analogSeek && Scrub(forward))
+    return;
+  if (m_scrubbing)
+    return;
+
   // not yet seeking
   if (!m_requireSeek)
   {
@@ -216,6 +235,82 @@ void CSeekHandler::Seek(bool forward, float amount, float duration /* = 0 */, bo
   m_timer.StartZero();
 }
 
+bool CSeekHandler::Scrub(bool forward)
+{
+  auto& components = CServiceBroker::GetAppComponents();
+  const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+  const int step = forward ? SCRUB_STEP_SECONDS : -SCRUB_STEP_SECONDS;
+  const int interval = CTrickplayThumbs::INTERVAL_SECONDS;
+
+  double target = m_scrubTarget + step;
+  if (!m_scrubbing)
+  {
+    if (!appPlayer->CanPause() || g_application.CurrentFileItem().IsLiveTV())
+      return false;
+
+    target = std::round((appPlayer->GetTime() / 1000.0 + step) / interval) * interval;
+    m_scrubWasPaused = appPlayer->IsPaused();
+    m_resumeAfterScrub = false;
+    if (!m_scrubWasPaused)
+      appPlayer->Pause();
+    m_scrubbing = true;
+    m_requireSeek = true;
+    m_seekDelay = SCRUB_RESUME_MS;
+  }
+
+  // The last thumbnail before the end: seeking to the very end would finish the video.
+  const double first = std::ceil(appPlayer->GetMinTime() / 1000.0 / interval) * interval;
+  const double last = std::floor((appPlayer->GetMaxTime() - 1) / 1000.0 / interval) * interval;
+  m_scrubTarget = std::max(first, std::min(target, last));
+  m_seekStepValue = step;
+  m_seekChanged = true;
+  m_timer.StartZero();
+  return true;
+}
+
+bool CSeekHandler::IsScrubbing() const
+{
+  std::unique_lock lock(m_critSection);
+  return m_scrubbing;
+}
+
+bool CSeekHandler::GetScrubTime(int presses, double& seconds) const
+{
+  std::unique_lock lock(m_critSection);
+  if (!m_scrubbing)
+    return false;
+
+  const auto& components = CServiceBroker::GetAppComponents();
+  const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+  const double time = m_scrubTarget + static_cast<double>(presses) * SCRUB_STEP_SECONDS;
+  if (time < 0 || time * 1000.0 >= appPlayer->GetMaxTime())
+    return false;
+
+  seconds = time;
+  return true;
+}
+
+void CSeekHandler::FinishScrub(bool seek)
+{
+  std::unique_lock lock(m_critSection);
+  if (!m_scrubbing)
+    return;
+
+  auto& components = CServiceBroker::GetAppComponents();
+  const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+  const double target = m_scrubTarget;
+  const bool resume = !m_scrubWasPaused;
+
+  m_scrubbing = false;
+  Reset();
+  ClearSeekStepValue();
+  if (seek)
+    appPlayer->SeekTime(static_cast<int64_t>(target * 1000));
+  if (resume && appPlayer->IsPaused())
+    appPlayer->Pause();
+  m_seekChanged = true;
+}
+
 void CSeekHandler::SeekSeconds(int seconds, int seekStepValue)
 {
   // abort if we do not have a play time or already perform a seek
@@ -237,6 +332,12 @@ void CSeekHandler::SeekSeconds(int seconds, int seekStepValue)
 int CSeekHandler::GetSeekSize() const
 {
   std::unique_lock lock(m_critSection);
+  if (m_scrubbing)
+  {
+    const auto& components = CServiceBroker::GetAppComponents();
+    const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+    return MathUtils::round_int(m_scrubTarget - appPlayer->GetTime() / 1000.0);
+  }
   return MathUtils::round_int(m_seekSize);
 }
 
@@ -283,7 +384,19 @@ void CSeekHandler::FrameMove()
   {
     std::unique_lock lock(m_critSection);
 
-    if (m_timer.GetElapsedMilliseconds() >= m_seekDelay && m_requireSeek)
+    if (m_resumeAfterScrub)
+    {
+      m_resumeAfterScrub = false;
+      const auto appPlayer = CServiceBroker::GetAppComponents().GetComponent<CApplicationPlayer>();
+      if (appPlayer->IsPaused())
+        appPlayer->Pause();
+    }
+
+    if (m_scrubbing && m_timer.GetElapsedMilliseconds() >= m_seekDelay)
+    {
+      FinishScrub(true);
+    }
+    else if (m_timer.GetElapsedMilliseconds() >= m_seekDelay && m_requireSeek)
     {
       // perform relative seek
       auto& components = CServiceBroker::GetAppComponents();

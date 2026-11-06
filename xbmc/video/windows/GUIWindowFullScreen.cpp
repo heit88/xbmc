@@ -82,6 +82,33 @@ bool CGUIWindowFullScreen::OnAction(const CAction &action)
 {
   auto& components = CServiceBroker::GetAppComponents();
   const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+
+  // Fork: while scrubbing, Select or Play goes to the chosen thumbnail, and Back (Stop, in our keymap)
+  // or Down stays where the video is.
+  if (appPlayer->GetSeekHandler().IsScrubbing())
+  {
+    switch (action.GetID())
+    {
+      case ACTION_SHOW_OSD:
+      case ACTION_SELECT_ITEM:
+      case ACTION_PAUSE:
+      case ACTION_PLAYER_PLAY:
+        appPlayer->GetSeekHandler().FinishScrub(true);
+        return true;
+      case ACTION_STOP:
+      case ACTION_NAV_BACK:
+      case ACTION_PREVIOUS_MENU:
+        appPlayer->GetSeekHandler().FinishScrub(false);
+        return true;
+      case ACTION_MOVE_DOWN:
+        appPlayer->GetSeekHandler().FinishScrub(false);
+        ToggleOSD();
+        return true;
+      default:
+        break;
+    }
+  }
+
   switch (action.GetID())
   {
   case ACTION_SHOW_OSD:

@@ -99,6 +99,7 @@ constexpr uint32_t PLAYER_IS_REMOTE                  = 85;
 constexpr uint32_t PLAYER_IS_EXTERNAL                = 86;
 constexpr uint32_t PLAYER_IS_LIVE                    = 87;
 constexpr uint32_t PLAYER_SEEK_THUMBNAIL             = 88;
+constexpr uint32_t PLAYER_SEEK_THUMBNAIL_AT          = 89;
 
 constexpr uint32_t WEATHER_DATA                      = 95;
 constexpr uint32_t WEATHER_IS_UPDATING               = 96;

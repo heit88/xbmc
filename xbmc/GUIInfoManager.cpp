@@ -955,9 +955,10 @@ constexpr std::array<InfoMap, 61> player_labels = {{
 ///     <p>
 ///   }
 // clang-format off
-constexpr std::array<InfoMap, 2> player_param = {{
+constexpr std::array<InfoMap, 3> player_param = {{
     {"art",               PLAYER_ITEM_ART},
     {"hasperformedseek",  PLAYER_HASPERFORMEDSEEK},
+    {"seekthumbnailat",   PLAYER_SEEK_THUMBNAIL_AT},
 }};
 // clang-format on
 

@@ -22,13 +22,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <mutex>
+#include <tuple>
 
 using namespace XFILE;
 
 namespace
 {
-constexpr int INTERVAL_MS = 10000; // Jellyfin's default trickplay interval
+constexpr int MAX_WANTED_DISTANCE = 30; // tiles from the chosen one
 }
 
 CTrickplayThumbs& CTrickplayThumbs::GetInstance()
@@ -42,9 +44,11 @@ void CTrickplayThumbs::StartLocating(const std::string& mediaPath)
   m_media = mediaPath;
   m_tileDir.clear();
   m_width = 0;
-  m_shown = -1;
   m_shownPath.clear();
-  m_sheetPath.clear();
+  m_ready.clear();
+  m_wanted.clear();
+  m_chosen = 0;
+  m_sheetNumber = -1;
   m_sheet.reset();
 
   const std::string oldOutDir = m_outDir;
@@ -116,7 +120,8 @@ void CTrickplayThumbs::Locate(unsigned int generation,
 std::string CTrickplayThumbs::GetThumb(const std::string& mediaPath,
                                        double seconds,
                                        float videoAspect,
-                                       bool keepPrevious)
+                                       bool keepPrevious,
+                                       bool isChosen)
 {
   std::unique_lock lock(m_lock);
 
@@ -125,82 +130,132 @@ std::string CTrickplayThumbs::GetThumb(const std::string& mediaPath,
   if (m_tileDir.empty())
     return {};
 
-  const int index = std::max(0, static_cast<int>(seconds * 1000 / INTERVAL_MS));
-  if (index != m_shown && m_pending < 0)
+  const int index = std::max(0, static_cast<int>(seconds / INTERVAL_SECONDS));
+  if (isChosen)
+    m_chosen = index;
+
+  const auto ready = m_ready.find(index);
+  if (ready != m_ready.end())
   {
-    // Jellyfin's tile height: width / aspect, rounded to an even number.
-    int tileHeight = videoAspect > 0 ? static_cast<int>(std::lround(m_width / videoAspect)) : 0;
-    tileHeight += tileHeight % 2;
-    m_pending = index;
-    const unsigned int generation = m_generation;
-    CServiceBroker::GetJobManager()->Submit([this, generation, index, tileHeight]()
-                                            { Extract(generation, index, tileHeight); });
+    if (isChosen)
+      m_shownPath = ready->second;
+    return ready->second;
   }
-  return keepPrevious || index == m_shown ? m_shownPath : std::string();
+
+  // Jellyfin's tile height: width / aspect, rounded to an even number.
+  m_tileHeight = videoAspect > 0 ? static_cast<int>(std::lround(m_width / videoAspect)) : 0;
+  m_tileHeight += m_tileHeight % 2;
+  m_wanted.insert(index);
+  if (!m_extracting)
+  {
+    m_extracting = true;
+    const unsigned int generation = m_generation;
+    CServiceBroker::GetJobManager()->Submit([this, generation]() { ExtractWanted(generation); });
+  }
+  return keepPrevious ? m_shownPath : std::string();
 }
 
-void CTrickplayThumbs::Extract(unsigned int generation, int index, int tileHeight)
+int CTrickplayThumbs::NextWanted(int loadedSheet)
 {
-  std::string sheetPath;
-  std::string loadedPath;
+  // Holding a button moves past tiles faster than they can be made; forget ones left far behind.
+  std::erase_if(m_wanted, [this](int index) { return std::abs(index - m_chosen) > MAX_WANTED_DISTANCE; });
+
+  // The chosen tile first, then ones from the sheet already loaded, then the nearest.
+  const int perSheet = m_cols * m_rows;
+  int best = -1;
+  auto bestRank = std::make_tuple(true, true, 0);
+  for (const int index : m_wanted)
+  {
+    const auto rank =
+        std::make_tuple(index != m_chosen, index / perSheet != loadedSheet, std::abs(index - m_chosen));
+    if (best < 0 || rank < bestRank)
+    {
+      best = index;
+      bestRank = rank;
+    }
+  }
+  if (best >= 0)
+    m_wanted.erase(best);
+  return best;
+}
+
+void CTrickplayThumbs::ExtractWanted(unsigned int generation)
+{
   std::unique_ptr<CTexture> sheet;
-  std::string outPath;
-  int cols;
-  int rows;
-  int width;
+  int loadedSheet = -1;
   {
     std::unique_lock lock(m_lock);
-    if (generation != m_generation)
+    if (generation == m_generation)
     {
-      m_pending = -1;
-      return;
-    }
-    const int perSheet = m_cols * m_rows;
-    sheetPath = URIUtils::AddFileToFolder(m_tileDir, std::to_string(index / perSheet) + ".jpg");
-    outPath = URIUtils::AddFileToFolder(m_outDir, std::to_string(index) + ".jpg");
-    cols = m_cols;
-    rows = m_rows;
-    width = m_width;
-    // Only one job runs at a time; it keeps the sheet for its next tile if the file hasn't changed.
-    sheet = std::move(m_sheet);
-    loadedPath = m_sheetPath;
-  }
-
-  bool ok = false;
-  if (sheetPath != loadedPath)
-  {
-    sheet = CTexture::LoadFromFile(sheetPath);
-    loadedPath = sheetPath;
-  }
-  if (sheet && sheet->GetPixels())
-  {
-    const int sheetWidth = static_cast<int>(sheet->GetWidth());
-    const int sheetHeight = static_cast<int>(sheet->GetHeight());
-    // Sheets may be stored scaled; work in the sheet's own pixels.
-    const float scale = static_cast<float>(sheetWidth) / (cols * width);
-    const int inSheet = index % (cols * rows);
-    const int w = sheetWidth / cols;
-    const int h = tileHeight > 0 ? static_cast<int>(std::lround(tileHeight * scale))
-                                 : sheetHeight / rows;
-    const int x = (inSheet % cols) * w;
-    const int y = (inSheet / cols) * h;
-    if (w > 0 && h > 0 && x + w <= sheetWidth && y + h <= sheetHeight)
-    {
-      uint32_t outWidth = w;
-      uint32_t outHeight = h;
-      uint8_t* pixels = sheet->GetPixels() + y * sheet->GetPitch() + x * 4;
-      ok = CPicture::CacheTexture(pixels, w, h, sheet->GetPitch(), 0, outWidth, outHeight, outPath);
+      sheet = std::move(m_sheet);
+      loadedSheet = m_sheetNumber;
     }
   }
 
-  std::unique_lock lock(m_lock);
-  m_pending = -1;
-  if (generation == m_generation)
+  while (true)
   {
-    m_sheet = std::move(sheet);
-    m_sheetPath = loadedPath;
-    // On failure show nothing for this tile rather than retrying every frame.
-    m_shown = index;
-    m_shownPath = ok ? outPath : std::string();
+    int index;
+    int sheetNumber;
+    std::string sheetPath;
+    std::string outPath;
+    int cols;
+    int rows;
+    int width;
+    int tileHeight;
+    {
+      std::unique_lock lock(m_lock);
+      if (generation != m_generation)
+      {
+        m_extracting = false;
+        return;
+      }
+      index = NextWanted(loadedSheet);
+      if (index < 0)
+      {
+        m_sheet = std::move(sheet);
+        m_sheetNumber = loadedSheet;
+        m_extracting = false;
+        return;
+      }
+      sheetNumber = index / (m_cols * m_rows);
+      sheetPath = URIUtils::AddFileToFolder(m_tileDir, std::to_string(sheetNumber) + ".jpg");
+      outPath = URIUtils::AddFileToFolder(m_outDir, std::to_string(index) + ".jpg");
+      cols = m_cols;
+      rows = m_rows;
+      width = m_width;
+      tileHeight = m_tileHeight;
+    }
+
+    if (sheetNumber != loadedSheet)
+    {
+      sheet = CTexture::LoadFromFile(sheetPath);
+      loadedSheet = sheetNumber;
+    }
+
+    bool ok = false;
+    if (sheet && sheet->GetPixels())
+    {
+      const int sheetWidth = static_cast<int>(sheet->GetWidth());
+      const int sheetHeight = static_cast<int>(sheet->GetHeight());
+      // Sheets may be stored scaled; work in the sheet's own pixels.
+      const float scale = static_cast<float>(sheetWidth) / (cols * width);
+      const int inSheet = index % (cols * rows);
+      const int w = sheetWidth / cols;
+      const int h = tileHeight > 0 ? static_cast<int>(std::lround(tileHeight * scale))
+                                   : sheetHeight / rows;
+      const int x = (inSheet % cols) * w;
+      const int y = (inSheet / cols) * h;
+      if (w > 0 && h > 0 && x + w <= sheetWidth && y + h <= sheetHeight)
+      {
+        uint32_t outWidth = w;
+        uint32_t outHeight = h;
+        uint8_t* pixels = sheet->GetPixels() + y * sheet->GetPitch() + x * 4;
+        ok = CPicture::CacheTexture(pixels, w, h, sheet->GetPitch(), 0, outWidth, outHeight, outPath);
+      }
+    }
+
+    std::unique_lock lock(m_lock);
+    if (generation == m_generation)
+      m_ready[index] = ok ? outPath : std::string(); // a failed tile shows nothing, without retrying
   }
 }

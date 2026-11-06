@@ -54,6 +54,22 @@ public:
   int GetSeekStepValue() const;
   bool InProgress() const;
 
+  /*!
+   \brief Whether video is paused on thumbnails, waiting to seek to the chosen one.
+   */
+  bool IsScrubbing() const;
+
+  /*!
+   \brief Time of the chosen thumbnail, or of the one a number of presses away from it.
+   \return false when not scrubbing, or when that time is outside the video.
+   */
+  bool GetScrubTime(int presses, double& seconds) const;
+
+  /*!
+   \brief Leave scrubbing and resume, seeking to the chosen thumbnail or staying where the video is.
+   */
+  void FinishScrub(bool seek);
+
   bool HasTimeCode() const;
   int GetTimeCodeSeconds() const;
 
@@ -67,6 +83,7 @@ private:
   static const int analogSeekDelay = 500;
 
   void SetSeekSize(double seekSize);
+  bool Scrub(bool forward);
   int GetSeekStepSize(SeekType type, int step) const;
   int GetSeekStepValue(SeekType type, int step) const;
 
@@ -78,6 +95,10 @@ private:
   double m_seekSize = 0;
   int m_seekStep = 0;
   int m_seekStepValue = 0;
+  bool m_scrubbing = false;
+  bool m_scrubWasPaused = false;
+  bool m_resumeAfterScrub = false;
+  double m_scrubTarget = 0;
   std::map<SeekType, std::vector<int>> m_forwardSeekSteps;
   std::map<SeekType, std::vector<int>> m_backwardSeekSteps;
   CStopWatch m_timer;
