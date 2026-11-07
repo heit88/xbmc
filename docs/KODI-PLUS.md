@@ -10,7 +10,7 @@ Kodi release, and it isn't published as a download.
 |---|---|---|
 | Kodi+ C++ code | `kodi-plus` in `heit88/xbmc`, based on Kodi's `Piers` | Public |
 | Fixes offered to Kodi | `fix/*` in `heit88/xbmc`, based on Kodi's `master` | Public |
-| Skin and add-ons | `skin/` in `Shield_control`, branch `main` | Private |
+| Skin and add-ons | `heit88/cinema-lite`, branch `main` | Private |
 
 `master` and `Piers` in this repository follow Kodi's own branches. Don't add Kodi+ work to them.
 Retired feature branches are kept as `archive/*` tags.
@@ -57,7 +57,7 @@ private skin or its add-ons.
 | MQTT commands | Runs commands from the `kodi/command` topic; a debug tool that may be removed | Skin | Skin only |
 | Problem reports | Saves a report of what was playing, from the player or over MQTT | Skin | Skin only |
 | Watched sync | Keeps watched status and resume points the same in Kodi+ and Jellyfin; the most recent change wins | Skin | Skin only |
-| Credits chapters | Adds a Credits chapter to MKV files, with backups for restoring them | `automation/` in `Shield_control` | Not being rolled out; the next-episode card replaced it |
+| Credits chapters | Adds a Credits chapter to MKV files, with backups for restoring them | `MediaLibrary/` in `Computer-setup-and-automations` | Not being rolled out; the next-episode card replaced it |
 
 ### Appearance
 
@@ -91,7 +91,7 @@ uninstalling first, which removes the profile stored with the app.
 |---|---|
 | A bug in Kodi itself | A new `fix/*` branch from Kodi's `master`, plus a PR to `xbmc/xbmc` |
 | A feature only Kodi+ needs | A commit on `kodi-plus`; prefix the subject with `[fork]` if it should never go upstream |
-| Anything in the skin or its add-ons | `Shield_control` |
+| Anything in the skin or its add-ons | `cinema-lite` |
 
 Fixes on `kodi-plus` can be dropped once the same change is in Kodi's `Piers` branch. Follow
 [CODE_GUIDELINES.md](CODE_GUIDELINES.md) and [CONTRIBUTING.md](CONTRIBUTING.md) for anything going
@@ -103,5 +103,5 @@ Kodi+ is private for now. These need resolving before any public release:
 
 - **Name and logo:** "Kodi" and its logo are trademarks of the XBMC Foundation, and a public build may need a new name and logo.
 - **License:** Kodi is GPL, so a shared APK needs its matching source code available.
-- **Skin repository:** the skin needs its own public repository, without the personal setup in `Shield_control`.
+- **Skin repository:** the skin has its own repository, `cinema-lite` (fresh history, split out of `Shield_control` on 2026-11-07). It stays private: it only works with the Kodi+ build.
 - **Signing:** a public APK needs its own signing key rather than the debug key.
