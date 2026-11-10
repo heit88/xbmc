@@ -214,6 +214,8 @@ bool CGUIControlGroupList::OnMessage(CGUIMessage& message)
       // scroll if we need to and update our page control
       ValidateOffset();
       float offset = 0;
+      // Start of the non-focusable controls (e.g. a row heading) just above the control
+      float headingOffset = 0;
       for (iControls it = m_children.begin(); it != m_children.end(); ++it)
       {
         CGUIControl *control = *it;
@@ -227,12 +229,14 @@ bool CGUIControlGroupList::OnMessage(CGUIMessage& message)
           else if (control == GetLastFocusableControl())
             ScrollTo(m_totalSize - Size());
           else if (offset < m_scroller.GetValue())
-            ScrollTo(offset);
+            ScrollTo(std::max(headingOffset, offset + Size(control) - Size()));
           else if (offset + Size(control) > m_scroller.GetValue() + Size())
             ScrollTo(offset + Size(control) - Size());
           break;
         }
         offset += Size(control) + m_itemGap;
+        if (control->CanFocus())
+          headingOffset = offset;
       }
     }
     break;
