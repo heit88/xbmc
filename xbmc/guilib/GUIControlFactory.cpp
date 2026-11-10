@@ -934,6 +934,7 @@ CGUIControl* CGUIControlFactory::Create(int parentID,
   unsigned int minutesPerTimeBlock{CGUIEPGGridContainer::DEFAULT_MINUTES_PER_BLOCK};
   int rulerUnit = 12;
   bool useControlCoords = false;
+  bool focusAtStart = false;
   bool renderFocusedLast = false;
 
   CRect hitRect;
@@ -1207,6 +1208,7 @@ CGUIControl* CGUIControlFactory::Create(int parentID,
   XMLUtils::GetInt(pControlNode, "preloaditems", preloadItems, 0, 2);
 
   XMLUtils::GetBoolean(pControlNode, "usecontrolcoords", useControlCoords);
+  XMLUtils::GetBoolean(pControlNode, "focusatstart", focusAtStart);
   XMLUtils::GetBoolean(pControlNode, "renderfocusedlast", renderFocusedLast);
   XMLUtils::GetBoolean(pControlNode, "resetonlabelchange", resetOnLabelChange);
 
@@ -1313,6 +1315,7 @@ CGUIControl* CGUIControlFactory::Create(int parentID,
       static_cast<CGUIControlGroup*>(control)->SetDefaultControl(defaultControl, defaultAlways);
       static_cast<CGUIControlGroup*>(control)->SetRenderFocusedLast(renderFocusedLast);
       static_cast<CGUIControlGroupList*>(control)->SetMinSize(minWidth, minHeight);
+      static_cast<CGUIControlGroupList*>(control)->SetFocusAtStart(focusAtStart);
 
       break;
     }

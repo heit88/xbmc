@@ -65,6 +65,7 @@ public:
 
   // based on grouplist orientation pick one value as minSize;
   void SetMinSize(float minWidth, float minHeight);
+  void SetFocusAtStart(bool focusAtStart) { m_focusAtStart = focusAtStart; }
   // shut up warning about hiding an overloaded virtual function
   using CGUIControlGroup::GetFirstFocusableControl;
 
@@ -138,6 +139,7 @@ protected:
   std::optional<int> m_lastPageControlTotalSize;
 
   bool m_useControlPositions;
+  bool m_focusAtStart = false;
   ORIENTATION m_orientation;
   uint32_t m_alignment;
 

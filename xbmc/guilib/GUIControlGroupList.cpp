@@ -47,6 +47,7 @@ CGUIControlGroupList::CGUIControlGroupList(const CGUIControlGroupList& other)
     m_totalSize(other.m_totalSize),
     m_scroller(other.m_scroller),
     m_useControlPositions(other.m_useControlPositions),
+    m_focusAtStart(other.m_focusAtStart),
     m_orientation(other.m_orientation),
     m_alignment(other.m_alignment),
     m_minSize(other.m_minSize)
@@ -226,6 +227,8 @@ bool CGUIControlGroupList::OnMessage(CGUIMessage& message)
           // find out whether this is the first or last control
           if (control == GetFirstFocusableControl())
             ScrollTo(0);
+          else if (m_focusAtStart)
+            ScrollTo(headingOffset);
           else if (control == GetLastFocusableControl())
             ScrollTo(m_totalSize - Size());
           else if (offset < m_scroller.GetValue())
