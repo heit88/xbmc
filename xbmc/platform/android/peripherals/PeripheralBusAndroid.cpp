@@ -454,6 +454,16 @@ bool CPeripheralBusAndroid::ConvertToPeripheralScanResult(
     return false;
   }
 
+  // Remotes such as Android TV Remote Service's "virtual-remote" report gamepad
+  // buttons but no axes. Leave them to the keyboard path so remote keymaps,
+  // long presses and key repeat apply.
+  if (!inputDevice.supportsSource(CJNIViewInputDevice::SOURCE_JOYSTICK) &&
+      inputDevice.supportsSource(CJNIViewInputDevice::SOURCE_DPAD))
+  {
+    CLog::Log(LOGDEBUG, "CPeripheralBusAndroid: ignoring remote control without axes");
+    return false;
+  }
+
   peripheralScanResult.m_type = PERIPHERAL_JOYSTICK;
   peripheralScanResult.m_strLocation = GetDeviceLocation(inputDevice.getId());
   peripheralScanResult.m_iVendorId = inputDevice.getVendorId();
