@@ -241,8 +241,15 @@ void CTrickplayThumbs::ExtractWanted(unsigned int generation)
       const float scale = static_cast<float>(sheetWidth) / (cols * width);
       const int inSheet = index % (cols * rows);
       const int w = sheetWidth / cols;
-      const int h = tileHeight > 0 ? static_cast<int>(std::lround(tileHeight * scale))
-                                   : sheetHeight / rows;
+      // Jellyfin doesn't always round a tile's height the way the aspect predicts (1280x536
+      // gives 132, not 134), and two pixels a row is enough to show a strip of the next row
+      // and to push the last row off the sheet. So the aspect only says how many rows this
+      // sheet holds, and the height comes from the sheet itself.
+      int sheetRows = rows;
+      if (tileHeight > 0)
+        sheetRows = std::clamp(
+            static_cast<int>(std::lround(sheetHeight / (tileHeight * scale))), 1, rows);
+      const int h = sheetHeight / sheetRows;
       const int x = (inSheet % cols) * w;
       const int y = (inSheet / cols) * h;
       if (w > 0 && h > 0 && x + w <= sheetWidth && y + h <= sheetHeight)
